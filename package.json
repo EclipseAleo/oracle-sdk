@@ -1,0 +1,29 @@
+{
+  "name": "oracle-sdk",
+  "version": "0.0.1",
+  "description": "Interact with ease with the eclipse contracts",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EclipseAleo/eclipse-sdk.git"
+  },
+  "keywords": [
+    "Eclipse",
+    "Aleo",
+    "Oracle",
+    "SDK"
+  ],
+  "author": "Aimé RISSON",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/EclipseAleo/eclipse-sdk/issues"
+  },
+  "homepage": "https://github.com/EclipseAleo/eclipse-sdk#readme",
+  "devDependencies": {
+    "@types/node": "^22.15.18",
+    "typescript": "^5.8.3"
+  }
+}
