@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/EclipseAleo/eclipse-sdk.git"
+    "url": "git+https://github.com/EclipseAleo/oracle-sdk.git"
   },
   "keywords": [
     "Eclipse",
@@ -19,9 +19,9 @@
   "author": "Eclipse Team",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/EclipseAleo/eclipse-sdk/issues"
+    "url": "https://github.com/EclipseAleo/oracle-sdk/issues"
   },
-  "homepage": "https://github.com/EclipseAleo/eclipse-sdk#readme",
+  "homepage": "https://github.com/EclipseAleo/oracle-sdk#readme",
   "devDependencies": {
     "@types/node": "^22.15.18",
     "typescript": "^5.8.3"
