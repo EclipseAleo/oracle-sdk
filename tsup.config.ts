@@ -9,4 +9,9 @@ export default defineConfig({
   clean: true,
   treeshake: true,
   outDir: 'dist',
+  outExtension({ format }) {
+    return {
+      js: format === 'cjs' ? '.js' : '.mjs',
+    };
+  },
 }); 
