@@ -2,8 +2,15 @@
   "name": "oracle-sdk",
   "version": "0.0.1",
   "description": "Interact with ease with the eclipse contracts",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "example": "ts-node examples/basic-usage.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -24,6 +31,10 @@
   "homepage": "https://github.com/EclipseAleo/oracle-sdk#readme",
   "devDependencies": {
     "@types/node": "^22.15.18",
-    "typescript": "^5.8.3"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.1.6"
+  },
+  "dependencies": {
+    "@scure/base": "^1.1.3"
   }
 }
