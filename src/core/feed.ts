@@ -34,11 +34,10 @@ export class FeedService {
    * Gets complete data for a feed
    * 
    * @param feedId ID of the feed
-   * @param name Display name of the feed
    * @param maxProviders Maximum number of providers to check
    * @returns Complete feed data
    */
-  async getFeedFullData(feedId: string, name: string, maxProviders = MAX_PROVIDERS): Promise<Feed> {
+  async getFeedFullData(feedId: string, maxProviders = MAX_PROVIDERS): Promise<Feed> {
     // 1. Get provider addresses
     const addresses = await this.client.getFeedProviders(feedId, maxProviders);
 
@@ -109,7 +108,7 @@ export class FeedService {
     // Return the complete feed object
     return {
       id: feedId,
-      name,
+      name: `Feed ${feedId}`,
       infos: feedInfo,
       totalStaked,
       submitters,

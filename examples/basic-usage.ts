@@ -13,7 +13,7 @@ async function fetchFeedData() {
   const feedService = new FeedService();
   
   // Get complete data for the Aleo/USD feed (ID: 3)
-  const feedData = await feedService.getFeedFullData('3', 'Aleo/USD');
+  const feedData = await feedService.getFeedFullData('3');
   
   console.log('Feed name:', feedData.name);
   console.log('Current price:', feedData.currentPrice);

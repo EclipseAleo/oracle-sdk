@@ -19,7 +19,7 @@ import { FeedService } from "@eclipse/oracle-sdk";
 const feedService = new FeedService();
 
 // Get complete data for a feed
-const feedData = await feedService.getFeedFullData("3", "Aleo/USD");
+const feedData = await feedService.getFeedFullData("3");
 console.log(feedData);
 ```
 
@@ -63,7 +63,7 @@ console.log(field.toString());
 
 The main service for retrieving complete feed data.
 
-- `getFeedFullData(feedId: string, name: string, maxProviders?: number): Promise<Feed>`
+- `getFeedFullData(feedId: string, maxProviders?: number): Promise<Feed>`
 
 ### AleoExplorerClient
 
