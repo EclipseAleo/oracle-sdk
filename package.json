@@ -1,10 +1,10 @@
 {
   "name": "oracle-sdk",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Interact with ease with the eclipse contracts",
   "type": "module",
-  "main": "./dist/index.cjs",          
-  "module": "./dist/index.mjs",        
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
   "browser": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -19,7 +19,7 @@
   "files": [
     "dist"
   ],
-  "sideEffects": false, 
+  "sideEffects": false,
   "scripts": {
     "build": "tsup",
     "prepublishOnly": "npm run build",
