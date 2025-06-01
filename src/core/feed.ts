@@ -1,5 +1,11 @@
-import { AleoExplorerClient } from '../api/client';
-import { Feed, FeedInfo, PricePoint, Provider, SlashedAddress } from '../types/feed';
+import { AleoExplorerClient } from "../api/client";
+import {
+  Feed,
+  FeedInfo,
+  PricePoint,
+  Provider,
+  SlashedAddress,
+} from "../types/feed";
 
 /**
  * Default maximum number of providers to check
@@ -19,10 +25,14 @@ export class FeedService {
 
   /**
    * Creates a new instance of the FeedService
-   * 
+   *
    * @param client AleoExplorerClient instance or config
    */
-  constructor(client?: AleoExplorerClient | { baseUrl?: string; network?: 'testnet' | 'mainnet' }) {
+  constructor(
+    client?:
+      | AleoExplorerClient
+      | { baseUrl?: string; network?: "testnet" | "mainnet" }
+  ) {
     if (client instanceof AleoExplorerClient) {
       this.client = client;
     } else {
@@ -32,33 +42,52 @@ export class FeedService {
 
   /**
    * Gets complete data for a feed
-   * 
+   *
    * @param feedId ID of the feed
    * @param maxProviders Maximum number of providers to check
    * @returns Complete feed data
    */
-  async getFeedFullData(feedId: string, maxProviders = MAX_PROVIDERS): Promise<Feed> {
+  async getFeedFullData(
+    feedId: string,
+    maxProviders = MAX_PROVIDERS
+  ): Promise<Feed> {
     // 1. Get provider addresses
     const addresses = await this.client.getFeedProviders(feedId, maxProviders);
 
-    // 2. Get stake amounts for each provider
-    const stakes = await Promise.all(
-      addresses.map((address) => this.client.getProviderStake(address, feedId))
-    );
-
-    // 3. Get total staked for the feed
-    const totalStaked = await this.client.getTotalStaked(feedId);
-
-    // 3b. Get current price for the feed
-    const currentPrice = await this.client.getCurrentPrice(feedId);
-
-    // 4. Get feed configuration
-    const feedInfo = await this.client.getFeedInfo(feedId);
-
-    // 5. Get proposed prices for each provider
-    const proposedPrices = await Promise.all(
-      addresses.map((address) => this.client.getProviderProposedPrice(address, feedId))
-    );
+    // 2. Paralléliser tous les appels indépendants
+    const [
+      stakes,
+      proposedPrices,
+      totalStaked,
+      currentPrice,
+      feedInfo,
+      advancedInfo,
+    ] = await Promise.all([
+      Promise.all(
+        addresses.map((address) =>
+          this.client.getProviderStake(address, feedId)
+        )
+      ),
+      Promise.all(
+        addresses.map((address) =>
+          this.client.getProviderProposedPrice(address, feedId)
+        )
+      ),
+      this.client.getTotalStaked(feedId),
+      this.client.getCurrentPrice(feedId),
+      this.client.getFeedInfo(feedId),
+      Promise.all([
+        this.client.getProviderCount(feedId),
+        this.client.getProposalMedian(feedId),
+        this.client.getProposalProposer(feedId),
+        this.client.getProposalBlock(feedId),
+        this.client.getProposalSlashed(feedId),
+        this.client.getAggregateDone(feedId),
+        this.client.getSlasher(feedId),
+        this.client.getSlasherReward(feedId),
+        this.client.getLastProposeBlock(feedId),
+      ]),
+    ]);
 
     // Combine provider data
     const submitters: Provider[] = addresses.map((address, i) => ({
@@ -67,22 +96,20 @@ export class FeedService {
       proposedPrice: proposedPrices[i],
     }));
 
-    // 6. Price history (currently mocked)
-    // In a real implementation, this would come from a historical data source
+    // 6. Price history (mocked)
     const priceHistory: PricePoint[] = [
-      { timestamp: '10:00', price: 1.03 },
-      { timestamp: '10:05', price: 1.04 },
-      { timestamp: '10:10', price: 1.035 },
+      { timestamp: "10:00", price: 1.03 },
+      { timestamp: "10:05", price: 1.04 },
+      { timestamp: "10:10", price: 1.035 },
     ];
 
-    // 7. Slashed addresses (currently mocked)
-    // In a real implementation, this would come from event logs or a dedicated mapping
+    // 7. Slashed addresses (mocked)
     const slashedAddresses: SlashedAddress[] = [
-      { address: 'aleo9...', date: '2024-06-01' },
-      { address: 'aleo10...', date: '2024-05-28' },
+      { address: "aleo9...", date: "2024-06-01" },
+      { address: "aleo10...", date: "2024-05-28" },
     ];
 
-    // 8. Get advanced staking and aggregation info
+    // 8. Advanced staking and aggregation info
     const [
       providerCount,
       proposalMedian,
@@ -93,17 +120,7 @@ export class FeedService {
       slasher,
       slasherReward,
       lastProposeBlock,
-    ] = await Promise.all([
-      this.client.getProviderCount(feedId),
-      this.client.getProposalMedian(feedId),
-      this.client.getProposalProposer(feedId),
-      this.client.getProposalBlock(feedId),
-      this.client.getProposalSlashed(feedId),
-      this.client.getAggregateDone(feedId),
-      this.client.getSlasher(feedId),
-      this.client.getSlasherReward(feedId),
-      this.client.getLastProposeBlock(feedId),
-    ]);
+    ] = advancedInfo;
 
     // Return the complete feed object
     return {
@@ -126,4 +143,4 @@ export class FeedService {
       lastProposeBlock,
     };
   }
-} 
+}
