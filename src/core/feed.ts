@@ -12,10 +12,6 @@ import {
  */
 const MAX_PROVIDERS = 8;
 
-/**
- * Default average block time in seconds
- */
-const AVERAGE_BLOCK_TIME_IN_SECONDS = 2;
 
 /**
  * Feed service for retrieving complete feed data
