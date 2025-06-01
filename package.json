@@ -1,6 +1,6 @@
 {
   "name": "oracle-sdk",
-  "version": "0.0.9",
+  "version": "0.1.0",
   "description": "Interact with ease with the eclipse contracts",
   "type": "module",
   "main": "./dist/index.cjs",

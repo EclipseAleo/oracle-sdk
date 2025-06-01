@@ -42,6 +42,10 @@ console.log(providers);
 const price = await client.getCurrentPrice("3");
 console.log(`Current Aleo/USD price: ${price}`);
 
+// Get price history
+const priceHistory = await feedService.getPriceHistory("3");
+console.log(priceHistory);
+
 // Get feed configuration information
 const feedInfo = await client.getFeedInfo("3");
 console.log(feedInfo);
@@ -74,6 +78,7 @@ Low-level client for interacting with Aleo contracts via the Explorer API.
 - `getProviderProposedPrice(address: string, feedId: string): Promise<number | null>`
 - `getTotalStaked(feedId: string): Promise<number>`
 - `getCurrentPrice(feedId: string): Promise<number | null>`
+- `getPriceHistory(feedId: string): Promise<PricePoint[]>`
 - `getFeedInfo(feedId: string): Promise<FeedInfo | null>`
 - `getProviderCount(feedId: string): Promise<number | null>`
 - `getProposalMedian(feedId: string): Promise<number | null>`
@@ -83,6 +88,7 @@ Low-level client for interacting with Aleo contracts via the Explorer API.
 - `getAggregateDone(feedId: string): Promise<boolean | null>`
 - `getSlasher(feedId: string): Promise<string | null>`
 - `getSlasherReward(feedId: string): Promise<number | null>`
+- `getSlashedAddresses(feedId: string): Promise<{string; string; "aggregator" | "provider" }[]>`
 - `getLastProposeBlock(feedId: string): Promise<number | null>`
 
 ## License

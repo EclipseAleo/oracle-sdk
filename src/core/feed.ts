@@ -12,12 +12,13 @@ import {
  */
 const MAX_PROVIDERS = 8;
 
-
 /**
  * Feed service for retrieving complete feed data
  */
 export class FeedService {
   private client: AleoExplorerClient;
+  private aggregateProgramId: string;
+
 
   /**
    * Creates a new instance of the FeedService
@@ -34,6 +35,83 @@ export class FeedService {
     } else {
       this.client = new AleoExplorerClient(client);
     }
+    this.aggregateProgramId = "eclipse_oracle_aggregate_4.aleo";
+  }
+
+  /**
+   * Get the price history of a feed
+   * @param feedId Feed ID
+   * @param maxTransactions Maximum number of transactions to analyze (max 1000 per request)
+   * @returns Array of PricePoint (timestamp (UNIX timestamp), price)
+   */
+  async getPriceHistory(feedId: string): Promise<PricePoint[]> {
+    const functionName = "propose";
+    const url = "https://testnetbeta.aleorpc.com";
+    const pageSize = 1000; // Max per request according to the doc
+    let page = 0;
+    let totalFetched = 0;
+    let finished = false;
+    const history: PricePoint[] = [];
+
+    while (!finished && totalFetched < pageSize) {
+      const toFetch = Math.min(pageSize, pageSize - totalFetched);
+      const body = JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "aleoTransactionsForProgram",
+        params: {
+          programId: this.aggregateProgramId,
+          functionName,
+          page,
+          maxTransactions: toFetch,
+        },
+      });
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+
+      if (!res.ok) break;
+      const data = await res.json();
+      const txs = data.result || [];
+      if (txs.length === 0) break;
+
+      for (const tx of txs) {
+        const finalizedAt = tx.finalizedAt || tx.transaction?.finalizedAt || "";
+        const transitions = tx.transaction?.execution?.transitions || [];
+        for (const transition of transitions) {
+          if (
+            transition.program === this.aggregateProgramId &&
+            transition.function === functionName
+          ) {
+            const inputFeed = (transition.inputs || []).find(
+              (input: any) => input.value === `${feedId}field`
+            );
+            if (inputFeed) {
+              const priceInput = (transition.inputs || []).find(
+                (input: any) =>
+                  typeof input.value === "string" &&
+                  input.value.match(/^[0-9]+u128$/)
+              );
+              if (priceInput) {
+                const price =
+                  Number(priceInput.value.replace("u128", "")) / 1e6;
+                history.push({ timestamp: finalizedAt, price });
+              }
+            }
+          }
+        }
+      }
+
+      totalFetched += txs.length;
+      page += 1;
+      if (txs.length < toFetch) finished = true;
+    }
+
+    // Sort by increasing date
+    return history.sort((a, b) => (a.timestamp > b.timestamp ? 1 : -1));
   }
 
   /**
@@ -50,7 +128,7 @@ export class FeedService {
     // 1. Get provider addresses
     const addresses = await this.client.getFeedProviders(feedId, maxProviders);
 
-    // 2. Paralléliser tous les appels indépendants
+    // 2. Parallelize all independent calls
     const [
       stakes,
       proposedPrices,
@@ -58,6 +136,8 @@ export class FeedService {
       currentPrice,
       feedInfo,
       advancedInfo,
+      priceHistory,
+      slashedAddresses,
     ] = await Promise.all([
       Promise.all(
         addresses.map((address) =>
@@ -83,29 +163,18 @@ export class FeedService {
         this.client.getSlasherReward(feedId),
         this.client.getLastProposeBlock(feedId),
       ]),
+      this.getPriceHistory(feedId),
+      this.getSlashedAddresses(feedId),
     ]);
 
-    // Combine provider data
+    // 3. Combine provider data
     const submitters: Provider[] = addresses.map((address, i) => ({
       address,
       stakedCredits: stakes[i] ?? 0,
       proposedPrice: proposedPrices[i],
     }));
 
-    // 6. Price history (mocked)
-    const priceHistory: PricePoint[] = [
-      { timestamp: "10:00", price: 1.03 },
-      { timestamp: "10:05", price: 1.04 },
-      { timestamp: "10:10", price: 1.035 },
-    ];
-
-    // 7. Slashed addresses (mocked)
-    const slashedAddresses: SlashedAddress[] = [
-      { address: "aleo9...", date: "2024-06-01" },
-      { address: "aleo10...", date: "2024-05-28" },
-    ];
-
-    // 8. Advanced staking and aggregation info
+    // 4. Advanced staking and aggregation info
     const [
       providerCount,
       proposalMedian,
@@ -118,7 +187,7 @@ export class FeedService {
       lastProposeBlock,
     ] = advancedInfo;
 
-    // Return the complete feed object
+    // 5. Return the complete feed object
     return {
       id: feedId,
       name: `Feed ${feedId}`,
@@ -138,5 +207,105 @@ export class FeedService {
       slasherReward,
       lastProposeBlock,
     };
+  }
+
+  /**
+   * Get the slashed addresses history for a feed
+   * @param feedId Feed ID
+   * @param maxTransactions Maximum number of transactions to analyze (max 1000 per request)
+   * @returns Array of { address, date, type }
+   */
+  async getSlashedAddresses(
+    feedId: string
+  ): Promise<
+    { address: string; date: string; type: "aggregator" | "provider" }[]
+  > {
+    const url = "https://testnetbeta.aleorpc.com";
+    const pageSize = 1000;
+    let page = 0;
+    let totalFetched = 0;
+    let finished = false;
+    const slashed: {
+      address: string;
+      date: string;
+      type: "aggregator" | "provider";
+    }[] = [];
+    const functions = ["slash_aggregator", "slash_provider"];
+
+    while (!finished && totalFetched < pageSize) {
+      const toFetch = Math.min(pageSize, pageSize - totalFetched);
+      const body = JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "aleoTransactionsForProgram",
+        params: {
+          programId: this.aggregateProgramId,
+          page,
+          maxTransactions: toFetch,
+        },
+      });
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+
+      if (!res.ok) break;
+      const data = await res.json();
+      const txs = data.result || [];
+      if (txs.length === 0) break;
+
+      for (const tx of txs) {
+        const finalizedAt = tx.finalizedAt || tx.transaction?.finalizedAt || "";
+        const transitions = tx.transaction?.execution?.transitions || [];
+        for (const transition of transitions) {
+          if (
+            transition.program === this.aggregateProgramId &&
+            functions.includes(transition.function)
+          ) {
+            const inputFeed = (transition.inputs || []).find(
+              (input: any) => input.value === `${feedId}field`
+            );
+            if (inputFeed) {
+              // slash_aggregator: proposer, slash_provider: provider
+              let slashedInput;
+              let type: "aggregator" | "provider" | undefined = undefined;
+              if (transition.function === "slash_aggregator") {
+                slashedInput = (transition.inputs || []).find(
+                  (input: any) =>
+                    typeof input.value === "string" &&
+                    input.value.startsWith("aleo") &&
+                    input.name === "proposer"
+                );
+                type = "aggregator";
+              } else if (transition.function === "slash_provider") {
+                slashedInput = (transition.inputs || []).find(
+                  (input: any) =>
+                    typeof input.value === "string" &&
+                    input.value.startsWith("aleo") &&
+                    input.name === "provider"
+                );
+                type = "provider";
+              }
+              if (slashedInput && type) {
+                slashed.push({
+                  address: slashedInput.value,
+                  date: finalizedAt,
+                  type,
+                });
+              }
+            }
+          }
+        }
+      }
+
+      totalFetched += txs.length;
+      page += 1;
+      if (txs.length < toFetch) finished = true;
+    }
+
+    // Sort by increasing date
+    return slashed.sort((a, b) => (a.date > b.date ? 1 : -1));
   }
 }
